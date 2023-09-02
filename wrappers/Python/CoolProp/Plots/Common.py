@@ -75,7 +75,7 @@ def get_critical_point(state):
 
 def interpolate_values_1d(x, y, x_points=None, kind='linear'):
     try:
-        from scipy.interpolate.interpolate import interp1d
+        from scipy.interpolate import interp1d
         if x_points is None:
             return interp1d(x, y, kind=kind)(x[np.isfinite(x)])
         else:
