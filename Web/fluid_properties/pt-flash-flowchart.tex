@@ -162,34 +162,44 @@
 
 \node[iterbox] at (176mm, -168mm) (gibbs)
   {Gibbs energy minimisation\\[-0.3mm]
-   Newton + backtracking line search\\[-0.3mm]
+   scaled Newton + Hebden trust-region\\[-0.3mm]
    ($v_i\!=\!\beta\,y_i$ variables)};
 
+\node[decision] at (176mm, -190mm) (d_gate) {Equal-fugacity\\converged?};
+
 \node[process, minimum width=38mm, text width=36mm]
-  at (176mm, -192mm) (final_update)
+  at (176mm, -212mm) (final_update)
   {Final density solve\\+ state update};
 
 % Stage 2 vertical spine
 \draw[arr] (rr) -- (ss2);
 \draw[arr] (ss2) -- (d_ss2);
 \draw[arr] (d_ss2.south) -- node[annot, right, pos=0.4] {no} (gibbs);
-\draw[arr] (gibbs) -- (final_update);
+\draw[arr] (gibbs) -- (d_gate);
+\draw[arr] (d_gate.south) -- node[annot, right, pos=0.4] {yes} (final_update);
 
 % Yes bypass: d_ss2 → final_update (route right of spine)
-\draw[arr] (d_ss2.east) -- node[annot, above] {yes} ++(10mm,0)
+\draw[arr] (d_ss2.east) -- node[annot, above] {yes} ++(14mm,0)
   |- (final_update.east);
+
+% Convergence gate (#3168): a non-converged split is never published — the
+% solver raises, and the blind flash then falls back to a single-phase solve.
+\node[terminal=amber!80!black, minimum width=24mm, text width=22mm]
+  at (130mm, -190mm) (gate_fail) {raise $\to$\\single-phase\\fallback};
+\draw[arr] (d_gate.west) -- node[annot, above, pos=0.5]
+  {\textcolor{amber!80!black}{$>10^{-7}$}} (gate_fail);
 
 % Result classification
 \node[decision, minimum width=30mm, text width=20mm]
-  at (176mm, -212mm) (d_beta) {$\beta$ value?};
+  at (176mm, -234mm) (d_beta) {$\beta$ value?};
 \draw[arr] (final_update) -- (d_beta);
 
 \node[terminal=navy, minimum width=20mm, text width=18mm]
-  at (154mm, -232mm) (res_liq) {Liquid\\$\beta \approx 0$};
+  at (154mm, -254mm) (res_liq) {Liquid\\$\beta \approx 0$};
 \node[terminal=cred, minimum width=20mm, text width=18mm]
-  at (176mm, -232mm) (res_2ph) {Two-phase\\$0\!<\!\beta\!<\!1$};
+  at (176mm, -254mm) (res_2ph) {Two-phase\\$0\!<\!\beta\!<\!1$};
 \node[terminal=navy, minimum width=20mm, text width=18mm]
-  at (198mm, -232mm) (res_vap) {Vapour\\$\beta \approx 1$};
+  at (198mm, -254mm) (res_vap) {Vapour\\$\beta \approx 1$};
 
 \draw[arr] (d_beta.west) -| (res_liq);
 \draw[arr] (d_beta.south) -- (res_2ph);
@@ -236,7 +246,7 @@
         rounded corners=5pt, fill=stage1bg, draw=slate,
         line width=0.4pt, inner sep=6mm] (s1box) {};
   % Stage 2 box
-  \node[fit=(rr)(ss2)(d_ss2)(gibbs)(final_update),
+  \node[fit=(rr)(ss2)(d_ss2)(gibbs)(d_gate)(final_update),
         rounded corners=5pt, fill=stage2bg, draw=slate,
         line width=0.4pt, inner sep=6mm] (s2box) {};
 \end{scope}

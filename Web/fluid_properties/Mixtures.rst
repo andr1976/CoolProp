@@ -367,11 +367,33 @@ Appendix B) are:
    + \beta\,\left(\frac{\partial \ln \hat{\varphi}_i^{(L)}}{\partial n_j}\right)_{T,P}
    + (1-\beta)\,\left(\frac{\partial \ln \hat{\varphi}_i^{(V)}}{\partial n_j}\right)_{T,P} - 1
 
-The Newton step :math:`\Delta\mathbf{v} = -\mathbf{H}^{-1}\mathbf{g}` is
-accepted only if the Gibbs energy decreases; otherwise the step is halved
-(backtracking line search).  Feasibility is maintained by scaling the step so
-that all mole numbers remain positive.  Convergence requires
-:math:`\max_i |g_i| < 10^{-9}`, with a maximum of 30 iterations.
+The raw Newton system :math:`\mathbf{H}\,\Delta\mathbf{v} = -\mathbf{g}` is
+poorly conditioned near the mixture critical point and for wide-boiling
+mixtures, so it is solved with conditioning and a restricted step rather than a
+plain Newton iteration:
+
+* **Diagonal scaling.** The system is rescaled by
+  :math:`d_i = \sqrt{z_i / (x_i y_i)}` (Michelsen :cite:`Michelsen-BOOK-2007`,
+  Appendix B), i.e. :math:`\tilde{\mathbf{H}} = \mathbf{D}^{-1}\mathbf{H}\mathbf{D}^{-1}`
+  and :math:`\tilde{\mathbf{g}} = \mathbf{D}^{-1}\mathbf{g}`, which makes the
+  Newton direction well-scaled.
+* **Hebden restricted step.** A diagonal shift :math:`\lambda \geq 0` is added so
+  that :math:`\tilde{\mathbf{H}} + \lambda\mathbf{I}` is positive definite —
+  guaranteeing a descent direction even where the reduced Hessian is indefinite
+  :cite:`Hebden-1973` — and the step is kept within a trust region whose radius
+  is adapted from the ratio of actual to predicted Gibbs-energy reduction.  A
+  step is accepted only if the Gibbs energy decreases, and the mole numbers are
+  kept positive.
+
+The iteration converges when
+:math:`\max_i |\ln \hat{f}_i^{(V)} - \ln \hat{f}_i^{(L)}| < 10^{-9}` (up to 50
+iterations with one restart).  **The equal-fugacity residual is re-checked on
+the final state**: if it still exceeds :math:`10^{-7}`, the solver raises rather
+than publishing a non-equilibrium split, restoring the legacy "no silent wrong
+answer" contract.  In the blind flash, such a failure — most often a stability
+false-positive at a genuinely single-phase state — is caught by
+``PT_flash_mixtures``, which falls back to a single-phase density solve; any
+other error propagates.
 
 .. _legacy-algorithm:
 
