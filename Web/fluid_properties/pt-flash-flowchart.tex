@@ -76,12 +76,19 @@
       font=\scriptsize\bfseries\sffamily, text=navy]
   at (0,0) (entry) {\texttt{PT\_flash\_mixtures}$(T,P,\mathbf{z})$};
 
-\node[decision] at (0,-20mm) (d_env) {Phase envelope\\available?};
+\node[decision] at (0,-20mm) (d_env) {Closed phase\\envelope built?};
 \draw[arr] (entry) -- (d_env);
 
-\node[terminal=slate, minimum width=20mm, text width=18mm]
-  at (-36mm,-20mm) (env_exit) {Pre-built\\boundary};
-\draw[arr] (d_env.west) -- node[annot, above] {yes} (env_exit);
+% Envelope-guided fast path: a previously built, closed phase envelope is used
+% to classify (T,P) directly via is_inside(), bypassing Stage-1 stability.
+\node[process, minimum width=40mm, text width=38mm]
+  at (-54mm,-20mm) (env_guided)
+  {Envelope-guided\\classification (\texttt{is\_inside})};
+\draw[arr] (d_env.west) -- node[annot, above] {yes} (env_guided);
+
+\node[terminal=navy, minimum width=22mm, text width=20mm]
+  at (-54mm,-62mm) (env_single) {Single-phase\\density solve};
+\draw[arr] (env_guided.south) -- node[annot, right, pos=0.3] {outside} (env_single);
 
 \node[decision] at (0,-44mm) (d_imp) {Phase imposed\\by caller?};
 \draw[arr] (d_env.south) -- node[annot, right, pos=0.4] {no} (d_imp);
@@ -204,6 +211,16 @@
 \draw[darr] (d_tpd2.east) -- node[annot, below, pos=0.2] {yes}
   ++(12mm,0) |- (s2merge);
 \fill[dgrey] (s2merge) circle (1.2pt);
+
+% Envelope fast path → Stage 2 (interior points bypass Stage-1 stability).
+% Routes over the top of the diagram and drops into the same merge as the
+% blind "unstable" arrow, so both reach the phase split.
+\coordinate (env_top) at (-54mm, 14mm);
+\coordinate (merge_top) at (132mm, 14mm);
+\draw[darr, color=cred, line width=0.7pt]
+  (env_guided.north) -- (env_top) -- (merge_top) -- (s2merge);
+\node[annot, text=cred, anchor=south] at (44mm, 14mm)
+  {envelope interior $\Rightarrow$ seed phase split (bypass stability)};
 
 % ════════════════════════════════════════════════════════════════
 % BACKGROUND BOXES

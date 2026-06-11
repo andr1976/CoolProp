@@ -180,15 +180,47 @@ Logic diagram
 .. figure:: pt-flash-flowchart.png
    :width: 100%
    :align: center
-   :alt: Flowchart of the blind PT flash algorithm showing initialisation,
-         Stage 1 (stability analysis) and Stage 2 (phase-split calculation).
+   :alt: Flowchart of the PT flash algorithm showing the envelope-guided fast
+         path, initialisation, Stage 1 (stability analysis) and Stage 2
+         (phase-split calculation).
 
-   Overview of the blind PT flash algorithm.  Initialisation checks for
-   pre-computed phase boundaries or caller-imposed phases before entering
-   the Michelsen two-stage procedure.  Stage 1 evaluates the tangent plane
-   distance (TPD) to detect instability; Stage 2 solves the phase split
-   via successive substitution, GDEM acceleration and, if needed, a
-   second-order Gibbs energy minimisation.
+   Overview of the PT flash algorithm.  Initialisation first checks for a
+   pre-built, closed phase envelope: if one is available it classifies the
+   :math:`(T, P)` point directly and interior (two-phase) points are routed
+   straight to Stage 2, **bypassing the stability analysis** (red path).
+   Otherwise, after the caller-imposed-phase check, the blind flash enters the
+   Michelsen two-stage procedure: Stage 1 evaluates the tangent plane distance
+   (TPD) to detect instability; Stage 2 solves the phase split via successive
+   substitution, GDEM acceleration and, if needed, a second-order Gibbs energy
+   minimisation.
+
+.. _envelope-guided:
+
+Envelope-guided fast path
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If a phase envelope has already been constructed for the mixture with
+:cpapi:`build_phase_envelope <CoolProp::AbstractState::build_phase_envelope>`
+and that envelope is *closed*, ``PT_flash_mixtures`` uses it as a fast,
+robust classifier and skips the stability analysis entirely:
+
+* The :math:`(T, P)` point is tested against the envelope with ``is_inside()``.
+* **Interior (two-phase) points** are sent directly to the Stage-2 phase-split
+  calculation, *seeded from the nearest stored envelope point* — its
+  compositions :math:`\mathbf{x}, \mathbf{y}`, vapour fraction :math:`\beta`,
+  and phase densities.  Because the envelope already brackets the equilibrium,
+  this initial guess is excellent — especially close to the phase boundary,
+  where a blind stability search is slowest — so the phase split converges in
+  very few iterations.  Stage 1 is bypassed.
+* **Exterior points** are resolved with a single-phase density solve, with the
+  gas/liquid root chosen from the temperature relative to the closest envelope
+  point.
+
+This path is only taken when the envelope is both *built* and *closed*; an open
+or absent envelope, or any failure along the envelope-guided route, falls
+through to the blind flash described below (stability analysis followed by the
+phase split).  The result is identical to the blind flash — the envelope only
+provides a better starting point and lets the solver skip the stability test.
 
 .. _tpd-stability:
 
